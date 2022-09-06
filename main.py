@@ -3,7 +3,7 @@ import os
 import logging
 
 from dotenv import load_dotenv
-from peewee import PostgresqlDatabase, SqliteDatabase
+from peewee import PostgresqlDatabase
 from fastapi import FastAPI
 from telebot.async_telebot import AsyncTeleBot
 
@@ -21,21 +21,20 @@ logger.addHandler(sh)
 load_dotenv()
 
 app = FastAPI()
-# db = PostgresqlDatabase(
-#     database=os.environ.get('DB_NAME'),
-#     host=os.environ.get('DB_HOST'),
-#     port=os.environ.get('DB_PORT'),
-#     user=os.environ.get('DB_USER'),
-#     password=os.environ.get('DB_PASS')
-# )
-db = SqliteDatabase('db.sqlite3')
+db = PostgresqlDatabase(
+    database=os.environ.get('DB_NAME', ),
+    user=os.environ.get('DB_USER'),
+    password=os.environ.get('DB_PASS'),
+    host=os.environ.get('DB_HOST'),
+    port=os.environ.get('DB_PORT')
+)
 bot = AsyncTeleBot(token=os.environ.get('BOT_TOKEN'))
 
 
 if __name__ == '__main__':
     logger.info('Started')
     db.connect()
-    models = [Game, User, Profile, Board, GameRole, GameResult]
+    models = [Game, User, Profile, Board, GameRole, GameResult, ProfileResult]
     db.drop_tables(models)
     db.create_tables(models)
 

@@ -1,8 +1,6 @@
-from gettext import gettext as _
-
 from telebot import types
 
-from constants import UserStatusChoice
+from constants import ProfileStatusChoice, GameResultStatus
 from main import *
 from models import *
 from utils import IDsOptionUtil
@@ -12,19 +10,29 @@ from utils import IDsOptionUtil
 async def add_board_handler(callback: types.CallbackQuery, ):
     markup = types.InlineKeyboardMarkup(row_width=1)
     markup.add(
-        types.InlineKeyboardButton(_('Назад'), callback_data='main')
+        types.InlineKeyboardButton('Назад', callback_data='main')
     )
     await bot.edit_message_text(
-        _('1. Создайте чат в TG\n'
-          '2. Пригласите туда всех игроков\n'
-          '3. Добавьте бота и дайте ему права администратора\n'
-          '4. Вызовите бота из чата командой /bot'),
+        '1. Создайте чат в TG\n'
+        '2. Пригласите туда всех игроков\n'
+        '3. Добавьте бота и дайте ему права администратора\n'
+        '4. Вызовите бота из чата командой /bot',
         callback.message.chat.id,
         callback.message.message_id
     )
 
 
 @bot.callback_query_handler(func=lambda c: c.data == 'delete')
+async def delete_message(callback: types.CallbackQuery):
+    board = Board.select().where(Board.group_id == callback.message.chat.id)
+    GameResult.select().where(GameResult.board == board, GameResult.status == GameResultStatus.STARTED.value).get().delete_instance()
+    await bot.delete_message(
+        callback.message.chat.id,
+        callback.message.message_id
+    )
+
+
+@bot.callback_query_handler(func=lambda c: c.data == 'hide')
 async def delete_message(callback: types.CallbackQuery):
     await bot.delete_message(
         callback.message.chat.id,
@@ -42,128 +50,104 @@ async def call_bot(message: types.Message):
 
         markup = types.InlineKeyboardMarkup(row_width=1)
         markup.add(
-            types.InlineKeyboardButton(_('Добавить результаты'), callback_data='userchoice'),
-            types.InlineKeyboardButton(_('Подробная статистика'), callback_data='detailed_stat')
+            types.InlineKeyboardButton('Добавить результаты', callback_data='add_result'),
+            types.InlineKeyboardButton('Подробная статистика', callback_data='detailed_stat')
         )
 
         await bot.send_message(
             message.chat.id,
-            _('Бот для ведения статистики настольних игр к вашим услугам!'),
+            'Бот для ведения статистики настольних игр к вашим услугам!',
             reply_markup=markup
         )
     else:
         await bot.send_message(
             message.chat.id,
-            _('Данная команда предназначена только для групп')
+            'Данная команда предназначена только для групп'
         )
 
 
-@bot.callback_query_handler(func=lambda c: c.data.startswith('userchoice'))
-async def log_user_choice_handler(callback: types.CallbackQuery):
-    markup = types.InlineKeyboardMarkup(row_width=2)
-    profiles = [i.id for i in Profile.select().where(
-        Profile.board == Board.select().where(Board.group_id == callback.message.chat.id))]
+@bot.callback_query_handler(func=lambda c: c.data == 'add_result')
+async def game_choice_handler(callback: types.CallbackQuery):
+    games = Game.select().where(Game.is_visible == True, Game.is_active == True)
+    markup = types.InlineKeyboardMarkup(row_width=1).add(
+        *[types.InlineKeyboardButton(i.name, callback_data=f'add_profiles_{i.id}') for i in games],
+        types.InlineKeyboardButton('Отмена', callback_data='hide')
+    )
+    await bot.edit_message_text(
+        'Выберите игру:',
+        callback.message.chat.id,
+        callback.message.message_id,
+        reply_markup=markup
+    )
 
-    if '_' in callback.data.removeprefix('userchoice_'):
-        users_status = IDsOptionUtil.from_str(callback.data.removeprefix('userchoice_'), UserStatusChoice.values())
+
+@bot.callback_query_handler(func=lambda c: c.data.startswith('add_profiles'))
+async def profiles_choice_handler(callback: types.CallbackQuery):
+    game = Game.select().where(Game.id == callback.data.removeprefix('add_profiles_')).get()
+    board = Board.select().where(Board.group_id == callback.message.chat.id).get()
+    profiles = Profile.select().where(Profile.board == board)
+    result = GameResult.get_or_create(game=game, board=board)
+
+    markup = types.InlineKeyboardMarkup(row_width=2).add(
+        *[
+            types.InlineKeyboardButton(f'❌ {i.user.username}', callback_data=f'add_profile_{i.id}_{result.id}')
+            for i in profiles
+        ],
+        types.InlineKeyboardButton('Отмена', callback_data='delete')
+    )
+    await bot.edit_message_text(
+        f'Игра: {game.name}\n'
+        f'Роли: {"Включены" if [i for i in game.roles] else "Выключены"}\n'
+        f'Счёт: {"Включен" if game.is_score else "Выключен"}\n'
+        f'\nВыберите игроков:',
+        callback.message.chat.id,
+        callback.message.message_id,
+        reply_markup=markup
+    )
+
+
+@bot.callback_query_handler(func=lambda c: c.data.startswith('add_profile'))
+async def profile_choice_handler(callback: types.CallbackQuery):
+    profile_id, result_id = callback.data.removeprefix('add_profile_').split('_')
+    profile = Profile.select().where(Profile.id == profile_id).get()
+    result = GameResult.select().where(GameResult.id == result_id).get()
+    board = Board.select().where(Board.group_id == callback.message.chat.id).get()
+
+    profile_result_ids = [
+        i.profile.id for i in ProfileResult.select(ProfileResult.profile).where(ProfileResult.game_result == result)
+    ]
+    if profile.id not in profile_result_ids:
+        ProfileResult.create(game_result=result, profile=profile)
     else:
-        users_status = IDsOptionUtil(ids=profiles, options=UserStatusChoice.values())
+        ProfileResult.delete().where(
+            ProfileResult.game_result == result, ProfileResult.profile == profile
+        ).execute()
+    profile_result_ids = [
+        i.profile.id for i in ProfileResult.select(ProfileResult.profile).where(ProfileResult.game_result == result)
+    ]
 
-    markup.add(
+    profiles = Profile.select().where(Profile.board == board)
+    markup = types.InlineKeyboardMarkup(row_width=2).add(
         *[
             types.InlineKeyboardButton(
-                f"{Profile.select().where(Profile.id == i).get().user.username} {'✅' if j == UserStatusChoice.PLAY.value else '❌'}",
-                callback_data='userchoice_' + users_status.get_ids_option(i).to_str()
-            )
-            for i, j in users_status
-        ]
-    )
-    markup.add(types.InlineKeyboardButton(_('Далее'), callback_data=f'usersave_{users_status.to_str()}'))
-    markup.add(types.InlineKeyboardButton(_('Отмена'), callback_data='delete'))
-
-    await bot.edit_message_text(
-        _('Выберите игроков, которые принимали участие в игре'),
-        callback.message.chat.id,
-        callback.message.message_id,
-        reply_markup=markup
-    )
-
-
-@bot.callback_query_handler(func=lambda c: c.data.startswith('usersave'))
-async def log_user_save_handler(callback: types.CallbackQuery):
-    users_status = IDsOptionUtil.from_str(callback.data.removeprefix('usersave_'))
-    profile_ids = [f'{i}' for i, j in users_status if j == UserStatusChoice.PLAY.value]
-
-    markup = types.InlineKeyboardMarkup(row_width=1)
-    markup.add(
-        *[
-            types.InlineKeyboardButton(i.name, callback_data=f"gamechoice_{i.id}_{','.join(profile_ids)}")
-            for i in Game.select()
+                f'✅ {i.user.username}' if i.id in profile_result_ids else f'❌ {i.user.username}',
+                callback_data=f'add_profile_{i.id}_{result.id}')
+            for i in profiles
         ],
-        types.InlineKeyboardButton(_('Отмена'), callback_data='delete')
+        types.InlineKeyboardButton('Отмена', callback_data='delete')
     )
 
     await bot.edit_message_text(
-        _('Выберите игру из списка:'),
+        f'Игра: {result.game.name}\n'
+        f'Роли: {"Включены" if [i for i in result.game.roles] else "Выключены"}\n'
+        f'Счёт: {"Включен" if result.game.is_score else "Выключен"}\n'
+        f'\nВыберите игроков:',
         callback.message.chat.id,
         callback.message.message_id,
         reply_markup=markup
     )
-
-
-@bot.callback_query_handler(func=lambda c: c.data.startswith('gamechoice'))
-async def log_game_choice_handler(callback: types.CallbackQuery):
-    if ',' in callback.data:
-        game, profiles = callback.data.removeprefix('gamechoice_').split('_')
-        profiles = Profile.select().where(Profile.id << profiles.split(',')).join(User)
-        game = Game.select().where(Game.id == int(game)).get()
-
-        game_results = []
-        for i in profiles:
-            game_results.append(GameResult.create(profile=i, game=game))
-
-        markup = types.InlineKeyboardMarkup(row_width=1)
-        game_roles = [i for i in game.roles]
-
-        if '_' in callback.data.removeprefix('gamechoice_'):
-            result_roles = IDsOptionUtil.from_str(callback.data.removeprefix('gamechoice_'), game_roles)
-        else:
-            result_roles = IDsOptionUtil(ids=[i.id for i in game_results], options=game_roles)
-
-        if game_roles:
-            markup.add(
-                *[
-                    types.InlineKeyboardButton(
-                        f"{GameResult.select().where(GameResult.id == i).get().profile.user.username}"
-                        f"[{GameRole.select().where(GameRole.id == j).get().name}]",
-                        callback_data='gamechoice_' + result_roles.get_ids_option(i).to_str())
-                    for i, j in result_roles
-                ],
-                types.InlineKeyboardButton('Далее',
-                                           callback_data='setrole_' + callback.data.removeprefix('gamechoice_'))
-            )
-
-            await bot.edit_message_text(
-                _(
-                    f'Настолочка: {game.name}\n' +
-                    f'Игроков: {len(profiles)}\n\n' +
-                    f'Выберите роль для участников игры'
-                ),
-                callback.message.chat.id,
-                callback.message.message_id,
-                reply_markup=markup
-            )
-    else:
-        await bot.edit_message_text(
-            _(f'Настолочка: {game.name}\nИгроков: {len(profiles)}\n'),
-            callback.message.chat.id,
-            callback.message.message_id,
-            reply_markup=markup
-        )
 
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith('setrole'))
 async def set_result_profile_role(callback: types.CallbackQuery):
-    profile, role = callback.data.removeprefix('setrole_').split('_')
-    profile = Profile.select().where(Profile.id == profile)
-    role = GameRole.select().where(GameRole.id == role)
+    pass

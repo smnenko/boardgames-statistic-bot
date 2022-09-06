@@ -11,6 +11,7 @@ python-dotenv = "*"
 uvicorn = "*"
 aiohttp = "*"
 peewee-migrations = "*"
+psycopg2-binary = "*"
 
 [dev-packages]
 
