@@ -1,6 +1,6 @@
 from telebot import types
 
-from constants import ProfileStatusChoice, GameResultStatus
+from constants import *
 from main import *
 from models import *
 from utils import IDsOptionUtil
@@ -51,7 +51,8 @@ async def call_bot(message: types.Message):
         markup = types.InlineKeyboardMarkup(row_width=1)
         markup.add(
             types.InlineKeyboardButton('Добавить результаты', callback_data='add_result'),
-            types.InlineKeyboardButton('Подробная статистика', callback_data='detailed_stat')
+            types.InlineKeyboardButton('Подробная статистика', callback_data='detailed_stat'),
+            types.InlineKeyboardButton(CANCEL_BUTTON, callback_data='hide')
         )
 
         await bot.send_message(
@@ -71,7 +72,7 @@ async def game_choice_handler(callback: types.CallbackQuery):
     games = Game.select().where(Game.is_visible == True, Game.is_active == True)
     markup = types.InlineKeyboardMarkup(row_width=1).add(
         *[types.InlineKeyboardButton(i.name, callback_data=f'add_profiles_{i.id}') for i in games],
-        types.InlineKeyboardButton('Отмена', callback_data='hide')
+        types.InlineKeyboardButton(CANCEL_BUTTON, callback_data='hide')
     )
     await bot.edit_message_text(
         'Выберите игру:',
@@ -93,7 +94,7 @@ async def profiles_choice_handler(callback: types.CallbackQuery):
             types.InlineKeyboardButton(f'❌ {i.user.username}', callback_data=f'add_profile_{i.id}_{result.id}')
             for i in profiles
         ],
-        types.InlineKeyboardButton('Отмена', callback_data='delete')
+        types.InlineKeyboardButton(CANCEL_BUTTON, callback_data='delete')
     )
     await bot.edit_message_text(
         f'Игра: {game.name}\n'
@@ -134,7 +135,12 @@ async def profile_choice_handler(callback: types.CallbackQuery):
                 callback_data=f'add_profile_{i.id}_{result.id}')
             for i in profiles
         ],
-        types.InlineKeyboardButton('Отмена', callback_data='delete')
+        types.InlineKeyboardButton(NEXT_BUTTON, callback_data=f'add_roles_{result_id}')
+        if [i for i in result.game.roles] else
+        types.InlineKeyboardButton(NEXT_BUTTON, callback_data=f'add_score_{result_id}')
+        if result.game.is_score else
+        types.InlineKeyboardButton(NEXT_BUTTON, callback_data=f'add_win_{result_id}'),
+        types.InlineKeyboardButton(CANCEL_BUTTON, callback_data='delete')
     )
 
     await bot.edit_message_text(

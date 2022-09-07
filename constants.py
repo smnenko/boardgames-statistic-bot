@@ -1,6 +1,10 @@
 from enum import Enum
 
 
+CANCEL_BUTTON = '⬅️ Отмена'
+NEXT_BUTTON = '⏩ Далее'
+
+
 class Choice(Enum):
 
     @classmethod
