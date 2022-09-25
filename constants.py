@@ -16,7 +16,7 @@ class Choice(Enum):
         return [i.value for i in cls]
 
 
-class GameScoreChoice(Choice):
+class ProfileResultStatusChoice(Choice):
     WIN = 1
     DRAW = 2
     DEFEAT = 3

@@ -1,11 +1,15 @@
 from datetime import datetime
 
+import inject
 import peewee
 
-import main
-from constants import GameScoreChoice, GameResultStatus
+from constants import ProfileResultStatusChoice, GameResultStatus
+
 
 __all__ = ('User', 'Board', 'Profile', 'Game', 'GameRole', 'ProfileResult', 'GameResult')
+
+
+db = inject.instance(peewee.PostgresqlDatabase)
 
 
 class User(peewee.Model):
@@ -18,7 +22,7 @@ class User(peewee.Model):
     updated_at = peewee.DateTimeField(default=datetime.now())
 
     class Meta:
-        database = main.db
+        database = db
 
 
 class Board(peewee.Model):
@@ -29,7 +33,7 @@ class Board(peewee.Model):
     updated_at = peewee.DateTimeField(default=datetime.now())
 
     class Meta:
-        database = main.db
+        database = db
 
 
 class Profile(peewee.Model):
@@ -42,7 +46,7 @@ class Profile(peewee.Model):
     updated_at = peewee.DateTimeField(default=datetime.now())
 
     class Meta:
-        database = main.db
+        database = db
 
 
 class Game(peewee.Model):
@@ -57,7 +61,7 @@ class Game(peewee.Model):
     updated_at = peewee.DateTimeField(default=datetime.now())
 
     class Meta:
-        database = main.db
+        database = db
 
 
 class GameRole(peewee.Model):
@@ -71,7 +75,7 @@ class GameRole(peewee.Model):
     updated_at = peewee.DateTimeField(default=datetime.now())
 
     class Meta:
-        database = main.db
+        database = db
 
 
 class GameResult(peewee.Model):
@@ -84,7 +88,7 @@ class GameResult(peewee.Model):
     updated_at = peewee.DateTimeField(default=datetime.now())
 
     class Meta:
-        database = main.db
+        database = db
 
 
 class ProfileResult(peewee.Model):
@@ -92,11 +96,11 @@ class ProfileResult(peewee.Model):
     game_result = peewee.ForeignKeyField(GameResult, backref='profile_results', on_delete='CASCADE')
     profile = peewee.ForeignKeyField(Profile, backref='results', on_delete='CASCADE')
     role = peewee.ForeignKeyField(GameRole, backref='results', null=True, on_delete='CASCADE')
-    result = peewee.IntegerField(choices=GameScoreChoice, null=True)
+    status = peewee.IntegerField(choices=ProfileResultStatusChoice, null=True)
     score = peewee.IntegerField(null=True)
 
     created_at = peewee.DateTimeField(default=datetime.now())
     updated_at = peewee.DateTimeField(default=datetime.now())
 
     class Meta:
-        database = main.db
+        database = db

@@ -1,39 +1,42 @@
 import asyncio
 import os
-import logging
+from logging import Logger
 
-from dotenv import load_dotenv
+import inject
+import uvicorn
+from fastapi import FastAPI, Request, Response
 from peewee import PostgresqlDatabase
-from fastapi import FastAPI
+from telebot import types
 from telebot.async_telebot import AsyncTeleBot
 
+import config
+
+
+inject.configure_once(config.configuration)
 from models import *
+from handlers import *
 
 
-logger = logging.getLogger('board_games_statistic')
-logger.setLevel(logging.INFO)
-fmt = logging.Formatter('BOT | %(asctime)s | %(message)s')
-sh = logging.StreamHandler()
-sh.setFormatter(fmt)
-logger.addHandler(sh)
+logger = inject.instance(Logger)
+app = inject.instance(FastAPI)
+db = inject.instance(PostgresqlDatabase)
+bot = inject.instance(AsyncTeleBot)
 
 
-load_dotenv()
-
-app = FastAPI()
-db = PostgresqlDatabase(
-    database=os.environ.get('DB_NAME', ),
-    user=os.environ.get('DB_USER'),
-    password=os.environ.get('DB_PASS'),
-    host=os.environ.get('DB_HOST'),
-    port=os.environ.get('DB_PORT')
-)
-bot = AsyncTeleBot(token=os.environ.get('BOT_TOKEN'))
+@app.post(f"/{os.environ.get('WEBHOOK_URL')}")
+async def telegram_updates_handler(request: Request):
+    if request.headers.get('content-type') == 'application/json':
+        update = types.Update.de_json(await request.json())
+        await bot.process_new_updates([update])
+        return Response(status_code=200)
+    return Response(status_code=403)
 
 
 if __name__ == '__main__':
     logger.info('Started')
+
     db.connect()
+
     models = [Game, User, Profile, Board, GameRole, GameResult, ProfileResult]
     db.drop_tables(models)
     db.create_tables(models)
@@ -42,9 +45,5 @@ if __name__ == '__main__':
     mafia = GameRole.create(game=game, name='Мафия')
     peace = GameRole.create(game=game, name='Мирный')
     sheriff = GameRole.create(game=game, name='Шериф', parent=peace)
-
-    from handlers import *
-    asyncio.run(bot.polling(skip_pending=True, timeout=60))
-
-    # uvicorn.run('main:app', use_colors=True)
+    uvicorn.run('main:app', use_colors=True, reload=True)
 

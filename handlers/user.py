@@ -1,9 +1,13 @@
 from gettext import gettext as _
 
+import inject
 from telebot import types
+from telebot.async_telebot import AsyncTeleBot
 
-from main import *
 from models import User
+
+
+bot = inject.instance(AsyncTeleBot)
 
 
 @bot.message_handler(commands=['start'])
