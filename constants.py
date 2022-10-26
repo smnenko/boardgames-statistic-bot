@@ -1,7 +1,9 @@
 from enum import Enum
 
 
-CANCEL_BUTTON = '⬅️ Отмена'
+HIDE_BUTTON = '⬆️ Скрыть'
+CANCEL_BUTTON = '⭕️ Отмена'
+PREV_BUTTON = '◀️ Назад'
 NEXT_BUTTON = '⏩ Далее'
 
 

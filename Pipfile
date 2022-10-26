@@ -12,6 +12,7 @@ uvicorn = "*"
 aiohttp = "*"
 peewee-migrations = "*"
 psycopg2-binary = "*"
+inject = "*"
 
 [dev-packages]
 

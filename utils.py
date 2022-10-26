@@ -1,42 +1,38 @@
-class IDsOptionUtil:
+from telebot import types
 
-    def __init__(self,  ids: list = None, options: list = None, ids_option: list = None):
-        self.ids = ids
-        self.options = options
+from constants import PREV_BUTTON
+from models import Game, GameRole
 
-        if not ids_option:
-            self.ids_option = [[i, options[0]] for i in ids]
-        else:
-            self.ids_option = ids_option
 
-    def get_next_option(self, option):
-        ind = self.options.index(option)
-        return (
-            self.options[ind + 1]
-            if ind < len(self.options) - 1
-            else self.options[0]
+def get_game_info(game: Game):
+    is_roles = True if [i for i in game.roles] else False
+    if is_roles:
+        is_roles = '\n  - ' + '\n  - ️'.join(i.name for i in game.roles)
+
+    return (
+        f'ID: {game.id}\n'
+        f'Название: {game.name}\n'
+        f'Роли: {is_roles if is_roles else "✖️"}\n'
+        f'Счёт: {"✔️" if game.is_score else "✖️"}\n'
+        f'Доступность: {"✔️" if game.is_visible else "✖️"}\n\n'
+        f'Дата создания: {game.created_at.strftime("%d %B, %Y")}'
+    )
+
+
+def get_game_settings_markup(game: Game):
+    return types.InlineKeyboardMarkup(row_width=1).add(
+            types.InlineKeyboardButton(
+                'Отключить счёт' if game.is_score else 'Включить счёт',
+                callback_data=f'edit_game_{game.id}_score'
+            ),
+            types.InlineKeyboardButton(
+                'Скрыть игру' if game.is_visible else 'Активировать игру',
+                callback_data=f'edit_game_{game.id}_visible'
+            ),
+            types.InlineKeyboardButton(
+                'Управление ролями',
+                callback_data=f'edit_roles_{game.id}'
+            ),
+            types.InlineKeyboardButton('Удалить игру', callback_data=f'edit_game_{game.id}_delete'),
+            types.InlineKeyboardButton(PREV_BUTTON, callback_data='settings_game')
         )
-
-    def get_ids_option(self, id_):
-        next_ids_option = []
-        for i, j in self.ids_option:
-            if id_ == i:
-                next_ids_option.append([i, self.get_next_option(j)])
-            else:
-                next_ids_option.append([i, j])
-
-        return IDsOptionUtil(ids_option=next_ids_option, options=self.options)
-
-    def __iter__(self):
-        return iter(self.ids_option)
-
-    @classmethod
-    def from_str(cls, string, options=None):
-        ids_option = []
-        for i in string.split('_'):
-            ids_option.append(list(map(lambda x: int(x), i.split(':'))))
-
-        return cls(ids_option=ids_option, options=options)
-
-    def to_str(self):
-        return '_'.join(f'{i}:{j}' for i, j in self.ids_option)

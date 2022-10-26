@@ -69,7 +69,7 @@ class Game(peewee.Model):
 class GameRole(peewee.Model):
     id = peewee.BigAutoField(primary_key=True, unique=True)
     name = peewee.CharField()
-    parent = peewee.ForeignKeyField('self', null=True, backref='parent')
+    parent = peewee.ForeignKeyField('self', null=True, backref='children')
 
     game = peewee.ForeignKeyField(Game, backref='roles')
 

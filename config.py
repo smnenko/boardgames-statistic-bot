@@ -1,11 +1,11 @@
-import asyncio
 import logging
 import os
+import time
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from peewee import PostgresqlDatabase
-from telebot.async_telebot import AsyncTeleBot
+from telebot import TeleBot
 
 
 def configuration(binder):
@@ -26,12 +26,13 @@ def configuration(binder):
         host=os.environ.get('DB_HOST'),
         port=os.environ.get('DB_PORT')
     )
-    bot = AsyncTeleBot(token=os.environ.get('BOT_TOKEN'))
+    bot = TeleBot(token=os.environ.get('BOT_TOKEN'))
 
     binder.bind(logging.Logger, logger)
     binder.bind(FastAPI, app)
     binder.bind(PostgresqlDatabase, db)
-    binder.bind(AsyncTeleBot, bot)
+    binder.bind(TeleBot, bot)
 
-    asyncio.run(bot.remove_webhook())
-    asyncio.run(bot.set_webhook(f"{os.environ.get('WEBHOOK_HOST')}/{os.environ.get('WEBHOOK_URL')}"))
+    bot.remove_webhook()
+    time.sleep(1)
+    bot.set_webhook(f"{os.environ.get('WEBHOOK_HOST')}/{os.environ.get('WEBHOOK_URL')}")
