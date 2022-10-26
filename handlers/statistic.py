@@ -23,9 +23,8 @@ async def statistic_handler(callback: types.CallbackQuery):
     await bot.edit_message_text(
         f'Сыграно игр: {results.count()}\n\n' +
         '\n'.join(
-            f'{i.user.username}'.ljust(10, ' ') + ' '
-            f'{str(results.join(ProfileResult).where(ProfileResult.profile == i, ProfileResult.status == ProfileResultStatusChoice.WIN.value).count() + results.join(ProfileResult).where(ProfileResult.profile == i, ProfileResult.status == ProfileResultStatusChoice.DRAW.value).count()).center(3, " ")}' +
-            f'{str(results.join(ProfileResult).where(ProfileResult.profile == i, ProfileResult.status == ProfileResultStatusChoice.DEFEAT.value).count()).center(3, " ")}'
+            f'{i.user.username} — '
+            f'{str(results.join(ProfileResult).where(ProfileResult.profile == i, ProfileResult.status == ProfileResultStatusChoice.WIN.value).count() + results.join(ProfileResult).where(ProfileResult.profile == i, ProfileResult.status == ProfileResultStatusChoice.DRAW.value).count())}'
             for i in board.profiles
         ) +
         '\n\nВыберите игрока для просмотра детальной статистики:',
@@ -37,7 +36,4 @@ async def statistic_handler(callback: types.CallbackQuery):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith('statistic_detailed'))
 async def statistic_detailed_handler(callback: types.CallbackQuery):
-    profile = Profile.select().where(Profile.id == callback.data.removeprefix('statistic_detailed_')).get()
-    markup = types.InlineKeyboardMarkup(row_width=1).add(
-        types.InlineKeyboardButton('⬅️ Назад', callback_data='statistic')
-    )
+    await bot.answer_callback_query(callback.id, 'Увы, детальную статистику пока не завезли', show_alert=True)

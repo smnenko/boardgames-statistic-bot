@@ -51,7 +51,9 @@ class Profile(peewee.Model):
 
 class Game(peewee.Model):
     id = peewee.BigAutoField(primary_key=True, unique=True)
-    name = peewee.CharField()
+    name = peewee.CharField(null=True)
+
+    board = peewee.ForeignKeyField(Board, backref='games', null=True)
 
     is_visible = peewee.BooleanField(default=False)
     is_active = peewee.BooleanField(default=True)
