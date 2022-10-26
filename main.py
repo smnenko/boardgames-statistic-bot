@@ -1,4 +1,3 @@
-import asyncio
 import os
 from logging import Logger
 
@@ -7,7 +6,7 @@ import uvicorn
 from fastapi import FastAPI, Request, Response
 from peewee import PostgresqlDatabase
 from telebot import types
-from telebot.async_telebot import AsyncTeleBot
+from telebot import TeleBot
 
 import config
 
@@ -20,14 +19,14 @@ from handlers import *
 logger = inject.instance(Logger)
 app = inject.instance(FastAPI)
 db = inject.instance(PostgresqlDatabase)
-bot = inject.instance(AsyncTeleBot)
+bot = inject.instance(TeleBot)
 
 
 @app.post(f"/{os.environ.get('WEBHOOK_URL')}")
 async def telegram_updates_handler(request: Request):
     if request.headers.get('content-type') == 'application/json':
         update = types.Update.de_json(await request.json())
-        await bot.process_new_updates([update])
+        bot.process_new_updates([update])
         return Response(status_code=200)
     return Response(status_code=403)
 
