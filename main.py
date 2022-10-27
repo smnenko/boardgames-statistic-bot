@@ -12,6 +12,7 @@ import config
 
 
 inject.configure_once(config.configuration)
+from handlers import *
 
 logger = inject.instance(Logger)
 app = inject.instance(FastAPI)
