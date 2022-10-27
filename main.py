@@ -12,9 +12,6 @@ import config
 
 
 inject.configure_once(config.configuration)
-from models import *
-from handlers import *
-
 
 logger = inject.instance(Logger)
 app = inject.instance(FastAPI)
@@ -22,7 +19,7 @@ db = inject.instance(PostgresqlDatabase)
 bot = inject.instance(TeleBot)
 
 
-@app.post(f"/{os.environ.get('WEBHOOK_URL')}")
+@app.post(f"/{os.environ.get('WEBHOOK_URL')}{os.environ.get('BOT_TOKEN').split(':')[:1]}")
 async def telegram_updates_handler(request: Request):
     if request.headers.get('content-type') == 'application/json':
         update = types.Update.de_json(await request.json())
@@ -36,13 +33,5 @@ if __name__ == '__main__':
 
     db.connect()
 
-    models = [Game, User, Profile, Board, GameRole, GameResult, ProfileResult]
-    db.drop_tables(models)
-    db.create_tables(models)
-
-    game = Game.create(name='Мафия', slug='mafia', is_visible=True, is_score=False)
-    mafia = GameRole.create(game=game, name='Мафия')
-    peace = GameRole.create(game=game, name='Мирный')
-    sheriff = GameRole.create(game=game, name='Шериф', parent=peace)
     uvicorn.run('main:app', use_colors=True, reload=True)
 
