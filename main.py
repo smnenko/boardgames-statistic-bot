@@ -12,6 +12,7 @@ import config
 
 
 inject.configure_once(config.configuration)
+from handlers import *
 
 logger = inject.instance(Logger)
 app = inject.instance(FastAPI)
@@ -19,7 +20,7 @@ db = inject.instance(PostgresqlDatabase)
 bot = inject.instance(TeleBot)
 
 
-@app.post(f"/{os.environ.get('WEBHOOK_URL')}{os.environ.get('BOT_TOKEN').split(':')[:1]}")
+@app.post(f"/{os.environ.get('WEBHOOK_URL')}")
 async def telegram_updates_handler(request: Request):
     if request.headers.get('content-type') == 'application/json':
         update = types.Update.de_json(await request.json())
