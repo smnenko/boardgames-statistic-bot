@@ -29,7 +29,7 @@ def bot_command_handler(message: types.Message):
     bot.delete_message(message.chat.id, message.message_id)
     if message.chat.id < 0:
         board, created = Board.get_or_create(group_id=message.chat.id)
-        for i in (bot.get_chat_administrators(message.chat.id)):
+        for i in (i for i in bot.get_chat_administrators(message.chat.id) if not i.user.is_bot):
             user, created = User.get_or_create(chat_id=i.user.id, username=i.user.username)
             Profile.get_or_create(user=user.id, board=board.id)
 
