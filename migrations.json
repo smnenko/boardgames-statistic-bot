@@ -1,0 +1,14 @@
+{
+  "prerun": "# some code here",
+  "directory": "migrations",
+  "history": "migratehistory",
+  "models": [
+    "models.User",
+    "models.Board",
+    "models.Profile",
+    "models.Game",
+    "models.GameRole",
+    "models.GameResult",
+    "models.ProfileResult"
+  ]
+}

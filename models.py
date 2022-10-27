@@ -1,15 +1,26 @@
+import os
 from datetime import datetime
 
 import inject
 import peewee
+from dotenv import load_dotenv
 
 from constants import ProfileResultStatusChoice, GameResultStatus
 
 
 __all__ = ('User', 'Board', 'Profile', 'Game', 'GameRole', 'ProfileResult', 'GameResult')
 
-
-db = inject.instance(peewee.PostgresqlDatabase)
+if not inject.get_injector():
+    load_dotenv()
+    db = peewee.PostgresqlDatabase(
+        database=os.environ.get('DB_NAME'),
+        user=os.environ.get('DB_USER'),
+        password=os.environ.get('DB_PASS'),
+        host=os.environ.get('DB_HOST'),
+        port=os.environ.get('DB_PORT')
+    )
+else:
+    db = inject.instance(peewee.PostgresqlDatabase)
 
 
 class User(peewee.Model):
