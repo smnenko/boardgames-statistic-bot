@@ -1,5 +1,7 @@
 .idea
+.deta
 **/__pycache__/**
 
 venv
 .env
+requirements.txt

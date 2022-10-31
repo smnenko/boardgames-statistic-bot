@@ -1,3 +1,4 @@
+import asyncio
 import os
 from logging import Logger
 
@@ -25,6 +26,7 @@ async def telegram_updates_handler(request: Request):
     if request.headers.get('content-type') == 'application/json':
         update = types.Update.de_json(await request.json())
         bot.process_new_updates([update])
+        await asyncio.sleep(1)
         return Response(status_code=200)
     return Response(status_code=403)
 

@@ -26,12 +26,14 @@ def hide_message(callback: types.CallbackQuery):
 
 @bot.message_handler(commands=['bot'])
 def bot_command_handler(message: types.Message):
-    bot.delete_message(message.chat.id, message.message_id)
     if message.chat.id < 0:
         board, created = Board.get_or_create(group_id=message.chat.id)
         for i in (i for i in bot.get_chat_administrators(message.chat.id) if not i.user.is_bot):
-            user, created = User.get_or_create(chat_id=i.user.id, username=i.user.username)
-            Profile.get_or_create(user=user.id, board=board.id)
+            user, created = User.get_or_create(chat_id=i.user.id)
+            if user.username != i.user.username:
+                user.username = i.user.username
+                user.save()
+            Profile.get_or_create(user=user.id, board=board)
 
         markup = types.InlineKeyboardMarkup(row_width=1).add(
             types.InlineKeyboardButton('Добавить результат', callback_data='add_result'),
@@ -39,7 +41,7 @@ def bot_command_handler(message: types.Message):
             types.InlineKeyboardButton('Настройки', callback_data='settings'),
             types.InlineKeyboardButton(HIDE_BUTTON, callback_data='hide')
         )
-
+        bot.delete_message(message.chat.id, message.message_id)
         bot.send_message(
             message.chat.id,
             'Бот для ведения статистики настольних игр к вашим услугам!',
@@ -340,9 +342,7 @@ def finish_game_handler(callback: types.CallbackQuery):
     result = GameResult.select().where(GameResult.id == result_id).get()
     result.status = GameResultStatus.FINISHED.value
     result.save()
-    bot.answer_callback_query(callback.id, 'Игра успешно записана в статистику', show_alert=False)
     bot.delete_message(callback.message.chat.id, callback.message.message_id)
-    bot.delete_message(callback.message.chat.id, callback.message.message_id - 1)
 
 
 @bot.callback_query_handler(func=lambda c: c.data == 'settings')
