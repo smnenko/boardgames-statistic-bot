@@ -72,7 +72,8 @@ def main_handler(callback: types.CallbackQuery):
 
 @bot.callback_query_handler(func=lambda c: c.data == 'add_result')
 def add_result_handler(callback: types.CallbackQuery):
-    games = Game.select().where(Game.is_visible == True, Game.is_active == True).order_by(Game.id.desc())
+    board = Board.select().where(Board.group_id == callback.message.chat.id).get()
+    games = Game.select().where(Game.is_visible == True, Game.is_active == True, Game.board == board).order_by(Game.id.desc())
     markup = types.InlineKeyboardMarkup(row_width=2).add(
         *[types.InlineKeyboardButton(i.name, callback_data=f'add_profiles_{i.id}') for i in games],
     ).add(
@@ -363,10 +364,11 @@ def settings_handler(callback: types.CallbackQuery):
 
 @bot.callback_query_handler(func=lambda c: c.data == 'settings_game')
 def settings_game_handler(callback: types.CallbackQuery):
+    board = Board.select().where(Board.group_id == callback.message.chat.id).get()
     markup = types.InlineKeyboardMarkup(row_width=2).add(
         *[
             types.InlineKeyboardButton(f'{i.name}', callback_data=f'edit_game_{i.id}')
-            for i in Game.select().order_by(Game.id.desc())
+            for i in Game.select().where(Game.board == board).order_by(Game.id.desc())
         ]
     ).add(
         types.InlineKeyboardButton('Добавить игру', callback_data='new_game'),
