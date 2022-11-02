@@ -6,70 +6,9 @@ from telebot import TeleBot, types
 
 from constants import *
 from models import *
-from utils import get_game_info, get_game_settings_markup
+
 
 bot = inject.instance(TeleBot)
-
-
-@bot.callback_query_handler(func=lambda c: c.data == 'delete')
-def delete_message(callback: types.CallbackQuery):
-    board = Board.select().where(Board.group_id == callback.message.chat.id)
-    GameResult.select().where(GameResult.board == board,
-                              GameResult.status == GameResultStatus.STARTED.value).get().delete_instance()
-    bot.delete_message(callback.message.chat.id, callback.message.message_id)
-
-
-@bot.callback_query_handler(func=lambda c: c.data == 'hide')
-def hide_message(callback: types.CallbackQuery):
-    bot.delete_message(callback.message.chat.id, callback.message.message_id)
-
-
-@bot.message_handler(commands=['bot'])
-def bot_command_handler(message: types.Message):
-    if message.chat.id < 0:
-        board, created = Board.get_or_create(group_id=message.chat.id)
-        for i in (i for i in bot.get_chat_administrators(message.chat.id) if not i.user.is_bot):
-            user, created = User.get_or_create(chat_id=i.user.id)
-            if user.username != i.user.username:
-                user.username = i.user.username
-                user.save()
-            Profile.get_or_create(user=user.id, board=board)
-
-        markup = types.InlineKeyboardMarkup(row_width=1).add(
-            types.InlineKeyboardButton('Добавить результат', callback_data='add_result'),
-            types.InlineKeyboardButton('Статистика', callback_data='statistic'),
-            types.InlineKeyboardButton('Настройки', callback_data='settings'),
-            types.InlineKeyboardButton(HIDE_BUTTON, callback_data='hide')
-        )
-        bot.delete_message(message.chat.id, message.message_id)
-        bot.send_message(
-            message.chat.id,
-            'Бот для ведения статистики настольних игр к вашим услугам!',
-            reply_markup=markup,
-            disable_notification=True
-        )
-    else:
-        bot.send_message(
-            message.chat.id,
-            'Данная команда предназначена только для групп'
-        )
-
-
-@bot.callback_query_handler(func=lambda c: c.data == 'main')
-def main_handler(callback: types.CallbackQuery):
-    markup = types.InlineKeyboardMarkup(row_width=1).add(
-        types.InlineKeyboardButton('Добавить результат', callback_data='add_result'),
-        types.InlineKeyboardButton('Статистика', callback_data='statistic'),
-        types.InlineKeyboardButton('Настройки', callback_data='settings'),
-        types.InlineKeyboardButton(HIDE_BUTTON, callback_data='hide')
-    )
-
-    bot.edit_message_text(
-        'Бот для ведения статистики настольних игр к вашим услугам!',
-        callback.message.chat.id,
-        callback.message.message_id,
-        reply_markup=markup
-    )
 
 
 @bot.callback_query_handler(func=lambda c: c.data == 'add_result')
@@ -350,6 +289,7 @@ def settings_handler(callback: types.CallbackQuery):
     bot.clear_step_handler_by_chat_id(callback.message.chat.id)
     markup = types.InlineKeyboardMarkup(row_width=1).add(
         types.InlineKeyboardButton('Игры', callback_data='settings_game'),
+        types.InlineKeyboardButton('Помощь', callback_data='support'),
         types.InlineKeyboardButton('Пожелания и предложения', callback_data='suggestions'),
         types.InlineKeyboardButton('Поддержать автора', url=os.environ.get('DONATE_AUTHOR')),
         types.InlineKeyboardButton(PREV_BUTTON, callback_data='main')
@@ -385,6 +325,39 @@ def settings_game_handler(callback: types.CallbackQuery):
 
 @bot.callback_query_handler(func=lambda c: c.data.startswith('edit_game'))
 def edit_game_handler(callback: types.CallbackQuery):
+
+    def get_game_info(game: Game):
+        is_roles = True if [i for i in game.roles] else False
+        if is_roles:
+            is_roles = '\n  - ' + '\n  - ️'.join(i.name for i in game.roles)
+
+        return (
+            f'ID: {game.id}\n'
+            f'Название: {game.name}\n'
+            f'Роли: {is_roles if is_roles else "✖️"}\n'
+            f'Счёт: {"✔️" if game.is_score else "✖️"}\n'
+            f'Доступность: {"✔️" if game.is_visible else "✖️"}\n\n'
+            f'Дата создания: {game.created_at.strftime("%d %B, %Y")}'
+        )
+
+    def get_game_settings_markup(game: Game):
+        return types.InlineKeyboardMarkup(row_width=1).add(
+            types.InlineKeyboardButton(
+                'Отключить счёт' if game.is_score else 'Включить счёт',
+                callback_data=f'edit_game_{game.id}_score'
+            ),
+            types.InlineKeyboardButton(
+                'Скрыть игру' if game.is_visible else 'Активировать игру',
+                callback_data=f'edit_game_{game.id}_visible'
+            ),
+            types.InlineKeyboardButton(
+                'Управление ролями',
+                callback_data=f'edit_roles_{game.id}'
+            ),
+            types.InlineKeyboardButton('Удалить игру', callback_data=f'edit_game_{game.id}_delete'),
+            types.InlineKeyboardButton(PREV_BUTTON, callback_data='settings_game')
+        )
+
     if '_score' in callback.data or '_visible' in callback.data or '_delete' in callback.data:
         game_id = callback.data.removeprefix('edit_game_').removesuffix('_score').removesuffix('_visible').removesuffix('_delete')
         game = Game.select().where(Game.id == game_id).get()
@@ -550,22 +523,22 @@ def new_game_handler(callback: types.CallbackQuery):
     bot.register_next_step_handler(msg, create_game_handler)
 
 
-def send_suggestions_handler(message: types.Message):
-    markup = types.InlineKeyboardMarkup(row_width=1).add(
-        types.InlineKeyboardButton(PREV_BUTTON, callback_data='settings')
-    )
-    bot.send_message(os.environ.get('SUGGESTIONS_GROUP_ID'), message.text)
-    bot.delete_message(message.chat.id, message.message_id)
-    bot.edit_message_text(
-        'Ваше пожелание успешно доставлено',
-        message.chat.id,
-        message.message_id - 1,
-        reply_markup=markup
-    )
-
-
 @bot.callback_query_handler(func=lambda c: c.data == 'suggestions')
 def suggestions_handler(callback: types.CallbackQuery):
+
+    def send_suggestions_handler(message: types.Message):
+        markup = types.InlineKeyboardMarkup(row_width=1).add(
+            types.InlineKeyboardButton(PREV_BUTTON, callback_data='settings')
+        )
+        bot.send_message(os.environ.get('SUGGESTIONS_GROUP_ID'), message.text)
+        bot.delete_message(message.chat.id, message.message_id)
+        bot.edit_message_text(
+            'Ваше пожелание успешно доставлено',
+            callback.message.chat.id,
+            callback.message.message_id,
+            reply_markup=markup
+        )
+
     markup = types.InlineKeyboardMarkup(row_width=1).add(
         types.InlineKeyboardButton(PREV_BUTTON, callback_data='settings')
     )
