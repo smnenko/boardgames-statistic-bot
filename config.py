@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -17,6 +18,8 @@ def configuration(binder):
 
     load_dotenv()
 
+    logger.info(f"Environment — {os.environ.get('ENVIRONMENT')}")
+
     app = FastAPI()
     db = PostgresqlDatabase(
         database=os.environ.get('DB_NAME'),
@@ -31,3 +34,9 @@ def configuration(binder):
     binder.bind(FastAPI, app)
     binder.bind(PostgresqlDatabase, db)
     binder.bind(TeleBot, bot)
+
+    if os.environ.get('ENVIRONMENT') == 'TEST':
+        bot.remove_webhook()
+        time.sleep(1.5)
+        bot.set_webhook(f"{os.environ.get('WEBHOOK_HOST')}/{os.environ.get('WEBHOOK_URL')}")
+        logger.info(f"Webhook has been set on {os.environ.get('WEBHOOK_HOST')}/{os.environ.get('WEBHOOK_URL')}")
