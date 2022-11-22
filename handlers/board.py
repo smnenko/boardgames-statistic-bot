@@ -174,7 +174,7 @@ def add_scores_handler(callback: types.CallbackQuery):
         profile_result = ProfileResult.select().where(ProfileResult.id == profile_result_id).get()
         markup = types.InlineKeyboardMarkup(row_width=5).add(
             types.InlineKeyboardButton('-10', callback_data=f'add_scores_{result_id}_{profile_result_id}_-10_change'),
-            types.InlineKeyboardButton('-1', callback_data=f'add_scores_{result_id}_{profile_result_id}_-10_change'),
+            types.InlineKeyboardButton('-1', callback_data=f'add_scores_{result_id}_{profile_result_id}_-1_change'),
             types.InlineKeyboardButton('0', callback_data=f'add_scores_{result_id}_{profile_result_id}_0_change'),
             types.InlineKeyboardButton('+1', callback_data=f'add_scores_{result_id}_{profile_result_id}_1_change'),
             types.InlineKeyboardButton('+10', callback_data=f'add_scores_{result_id}_{profile_result_id}_10_change'),
