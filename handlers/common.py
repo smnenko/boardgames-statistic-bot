@@ -52,7 +52,10 @@ def bot_command_handler(message: types.Message):
                 user.username = i.user.username
                 user.save()
             profile, _ = Profile.get_or_create(user=user.id, board=board)
-            ProfileRank.get_or_create(profile=profile)
+            profile_rank, created = ProfileRank.get_or_create(profile=profile)
+            if created:
+                profile_rank.points = 0
+                profile_rank.save()
 
         markup = types.InlineKeyboardMarkup(row_width=1).add(
             types.InlineKeyboardButton('Добавить результат', callback_data='add_result'),
