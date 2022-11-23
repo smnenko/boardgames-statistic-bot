@@ -9,6 +9,8 @@
     "models.Game",
     "models.GameRole",
     "models.GameResult",
-    "models.ProfileResult"
+    "models.ProfileResult",
+    "models.Rank",
+    "models.ProfileRank"
   ]
 }

@@ -1,7 +1,9 @@
 import inject
+from peewee import fn
 from telebot import TeleBot, types
 
 from constants import PREV_BUTTON
+from models import Rank
 
 bot = inject.instance(TeleBot)
 
@@ -13,6 +15,7 @@ def support_handler(callback: types.CallbackQuery):
         types.InlineKeyboardButton('Как добавить игру?', callback_data='support_how_create_game'),
         types.InlineKeyboardButton('Как добавить роли к игре?', callback_data='support_how_add_roles'),
         types.InlineKeyboardButton('Как считать очки?', callback_data='support_count_points'),
+        types.InlineKeyboardButton('Как поднимать ранг?', callback_data='support_raise_rank'),
         types.InlineKeyboardButton(PREV_BUTTON, callback_data='settings')
     )
     bot.edit_message_text(
@@ -79,6 +82,25 @@ def support_count_points_handler(callback: types.CallbackQuery):
         'Очки — не менее важная деталь, чем роли. Очки важно учитывать в таких играх, как Каркассон и, к примеру, '
         'Ticket To Ride (Билет на поезд). Чтобы включить в игре функцию подсчёта очков, необходимо перйти в меню '
         'Настройки -> Игры -> [Название вашей игры] и нажать на кнопку "Включить счёт"',
+        callback.message.chat.id,
+        callback.message.message_id,
+        reply_markup=markup
+    )
+
+
+@bot.callback_query_handler(func=lambda c: c.data == 'support_raise_rank')
+def support_count_points_handler(callback: types.CallbackQuery):
+    markup = types.InlineKeyboardMarkup(row_width=1).add(
+        types.InlineKeyboardButton(PREV_BUTTON, callback_data='support')
+    )
+    ranks = ' '.join(i.name for i in Rank.select())
+    bot.edit_message_text(
+        f'Ранги влияют только на отображение медалей рядом с именем пользователя игрока и выглядят так: {ranks}. '
+        f'Чтобы достичь максимального ранга необходимо набрать {Rank.select(fn.MAX(Rank.points)).scalar()} '
+        f'рейтинговых очков.\n\n'
+        f'Рейтинговые очки можно получить за игру в настольные игры и внесение их результатов в статистику. За '
+        f'победу можно получить 30 очков, за ничью 10 очков, а за поражение потерять 5 очков. Так же важно учесть, что '
+        f'не может быть очков меньше нуля.',
         callback.message.chat.id,
         callback.message.message_id,
         reply_markup=markup

@@ -16,8 +16,8 @@ class Profile(peewee.Model):
     board = peewee.ForeignKeyField(Board, backref='profiles')
     user = peewee.ForeignKeyField(User, backref='profiles')
 
-    created_at = peewee.DateTimeField(default=datetime.now())
-    updated_at = peewee.DateTimeField(default=datetime.now())
+    created_at = peewee.DateTimeField(default=datetime.now)
+    updated_at = peewee.DateTimeField(default=datetime.now)
 
     class Meta:
         database = db

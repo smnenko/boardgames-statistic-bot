@@ -279,6 +279,20 @@ def add_statuses_handler(callback: types.CallbackQuery):
 def finish_game_handler(callback: types.CallbackQuery):
     result_id = callback.data.removeprefix('finish_game_')
     result = GameResult.select().where(GameResult.id == result_id).get()
+    for i in result.profile_results:
+        rank = i.profile.rank.get()
+        if i.status == ProfileResultStatusChoice.WIN.value:
+            rank.points += 30
+        elif i.status == ProfileResultStatusChoice.DRAW.value:
+            rank.points += 10
+        else:
+            if i.status == ProfileResultStatusChoice.DEFEAT.value:
+                if rank.points - 5 >= 0:
+                    rank.points -= 5
+                else:
+                    rank.points = 0
+        rank.save()
+
     result.status = GameResultStatus.FINISHED.value
     result.save()
     bot.delete_message(callback.message.chat.id, callback.message.message_id)

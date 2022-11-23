@@ -13,8 +13,8 @@ class User(peewee.Model):
     chat_id = peewee.BigIntegerField(unique=True)
     username = peewee.CharField(null=True)
 
-    created_at = peewee.DateTimeField(default=datetime.now())
-    updated_at = peewee.DateTimeField(default=datetime.now())
+    created_at = peewee.DateTimeField(default=datetime.now)
+    updated_at = peewee.DateTimeField(default=datetime.now)
 
     class Meta:
         database = db
