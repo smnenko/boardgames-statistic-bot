@@ -20,8 +20,8 @@ class ProfileResult(peewee.Model):
     status = peewee.IntegerField(choices=ProfileResultStatusChoice, null=True)
     score = peewee.IntegerField(null=True)
 
-    created_at = peewee.DateTimeField(default=datetime.now())
-    updated_at = peewee.DateTimeField(default=datetime.now())
+    created_at = peewee.DateTimeField(default=datetime.now)
+    updated_at = peewee.DateTimeField(default=datetime.now)
 
     class Meta:
         database = db

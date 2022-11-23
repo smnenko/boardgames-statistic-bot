@@ -51,7 +51,8 @@ def bot_command_handler(message: types.Message):
             if user.username != i.user.username:
                 user.username = i.user.username
                 user.save()
-            Profile.get_or_create(user=user.id, board=board)
+            profile, _ = Profile.get_or_create(user=user.id, board=board)
+            ProfileRank.get_or_create(profile=profile)
 
         markup = types.InlineKeyboardMarkup(row_width=1).add(
             types.InlineKeyboardButton('Добавить результат', callback_data='add_result'),

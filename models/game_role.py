@@ -16,8 +16,8 @@ class GameRole(peewee.Model):
 
     game = peewee.ForeignKeyField(Game, backref='roles')
 
-    created_at = peewee.DateTimeField(default=datetime.now())
-    updated_at = peewee.DateTimeField(default=datetime.now())
+    created_at = peewee.DateTimeField(default=datetime.now)
+    updated_at = peewee.DateTimeField(default=datetime.now)
 
     class Meta:
         database = db
