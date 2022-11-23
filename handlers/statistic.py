@@ -65,8 +65,7 @@ def statistic_profile_handler(callback: types.CallbackQuery):
         f'        Рейтинг — {profile_points}',
         callback.message.chat.id,
         callback.message.message_id,
-        reply_markup=markup,
-        parse_mode='markdown'
+        reply_markup=markup
     )
 
 
